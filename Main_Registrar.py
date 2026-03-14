@@ -19,6 +19,27 @@ MASTER_KEY = os.getenv("MASTER_API_KEY", "Samrat_Omor_16_Year_Gift")
 def dashboard():
     return render_template('index.html')
 
+# ১. নতুন GET রুট: ডোমেইন রেজোলিউশন চেক করার জন্য
+@app.route('/api/v1/resolve', methods=['GET'])
+def resolve():
+    domain = request.args.get("domain")
+    if not domain:
+        return jsonify({"status": "error", "message": "Domain parameter is missing"}), 400
+
+    # Registrar থেকে সব ডাটা নিয়ে আসা
+    all_data = registrar.get_all_domains()
+    
+    if domain in all_data:
+        return jsonify({
+            "status": "success",
+            "domain": domain,
+            "target": all_data[domain]["target"],
+            "info": all_data[domain]
+        }), 200
+    else:
+        return jsonify({"status": "error", "message": "Domain not found in SmritiName registry"}), 404
+
+# ২. ডোমেইন রেজিস্ট্রেশন রুট (POST)
 @app.route('/api/v1/register', methods=['POST'])
 def register():
     # অথেন্টিকেশন চেক
@@ -53,6 +74,6 @@ def register():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    # রেন্ডার সাধারণত ৮0৮0 বা তার বেশি পোর্ট ব্যবহার করে
+    # রেন্ডার সাধারণত ৮০৮০ বা তার বেশি পোর্ট ব্যবহার করে
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
