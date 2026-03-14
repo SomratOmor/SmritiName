@@ -5,67 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmritiName | Central Registry</title>
     <style>
-        :root { --glow: #00ffcc; --bg: #0a0a0a; }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .card { background: #1a1a1a; padding: 25px; border-radius: 15px; border: 1px solid var(--glow); box-shadow: 0 0 15px rgba(0,255,204,0.2); width: 100%; max-width: 400px; }
-        h2 { color: var(--glow); text-align: center; margin-top: 0; }
-        input { width: 90%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #444; color: white; border-radius: 5px; }
-        button { width: 100%; padding: 12px; background: var(--glow); border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: black; transition: 0.3s; }
-        button:hover { background: #00cca3; transform: scale(1.02); }
-        #status { margin-top: 15px; text-align: center; font-size: 14px; }
-        .footer { margin-top: 20px; color: #555; font-size: 12px; }
+        body { background: #0a0a0a; color: #00ffcc; font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; }
+        .box { background: #111; border: 1px solid #00ffcc; padding: 30px; border-radius: 10px; width: 300px; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 10px 0; background: #222; border: 1px solid #444; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #00ffcc; border: none; font-weight: bold; cursor: pointer; }
+        #msg { margin-top: 15px; font-size: 13px; }
     </style>
 </head>
 <body>
-
-    <div class="card">
-        <h2>SmritiName Control</h2>
-        <input type="text" id="domain" placeholder="Domain (e.g. smriti.cloud)">
-        <input type="text" id="target" placeholder="Target URL (e.g. root-d6v2.onrender.com)">
-        <button onclick="registerDomain()">Register & Sync</button>
-        <div id="status"></div>
+    <div class="box">
+        <h2>SmritiName</h2>
+        <input type="text" id="domain" placeholder="Domain Name">
+        <input type="text" id="target" placeholder="Target URL">
+        <button id="btn">REGISTER</button>
+        <div id="msg"></div>
     </div>
 
-    <div class="footer">16 Years of Dedication | Project Smriti</div>
-
     <script>
-        async function registerDomain() {
+        document.getElementById('btn').addEventListener('click', async () => {
             const domain = document.getElementById('domain').value;
             const target = document.getElementById('target').value;
-            const status = document.getElementById('status');
+            const msg = document.getElementById('msg');
 
-            if(!domain || !target) {
-                status.innerText = "⚠️ Fill all fields!";
-                status.style.color = "orange";
-                return;
-            }
-
-            status.innerText = "⏳ Syncing with Master Cloud...";
-            status.style.color = "cyan";
+            msg.innerText = "Sending...";
 
             try {
-                const response = await fetch('/api/v1/register', {
+                const res = await fetch('/api/v1/register', {
                     method: 'POST',
-                    headers: {
+                    headers: { 
                         'Content-Type': 'application/json',
-                        'X-Smriti-Key': 'Samrat_Omor_16_Year_Gift' // তোমার সিক্রেট কি
+                        'X-Smriti-Key': 'Samrat_Omor_16_Year_Gift'
                     },
                     body: JSON.stringify({ domain, target })
                 });
-
-                const result = await response.json();
-                if(result.status === "success") {
-                    status.innerText = "✅ Successfully Registered & Immortalized!";
-                    status.style.color = "#00ffcc";
+                
+                const data = await res.json();
+                if(data.status === 'success') {
+                    msg.innerHTML = "✅ Registered Successfully!";
+                    msg.style.color = "#00ffcc";
                 } else {
-                    status.innerText = "❌ Registration Failed!";
-                    status.style.color = "red";
+                    msg.innerHTML = "❌ Error: " + (data.message || "Failed");
+                    msg.style.color = "red";
                 }
-            } catch (error) {
-                status.innerText = "❌ Error: Could not connect to API";
-                status.style.color = "red";
+            } catch (e) {
+                msg.innerHTML = "❌ Server not responding";
+                msg.style.color = "red";
             }
-        }
+        });
     </script>
 </body>
 </html>
