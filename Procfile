@@ -1,0 +1,1 @@
+web: gunicorn Main_Registrar:app
