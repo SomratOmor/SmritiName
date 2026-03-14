@@ -1,79 +1,90 @@
 import os
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS  # ব্রাউজার কানেকশনের জন্য
+import json
+from flask import Flask, request, jsonify, render_template, redirect
+from flask_cors import CORS
 from core.Registrar import Registrar
 
 app = Flask(__name__, 
             template_folder="dashboard/templates", 
             static_folder="dashboard/static")
 
-# এটি যোগ করলে ব্রাউজার থেকে বাটন টিপলে আর ব্লক করবে না
+# বাইরের এপিআই কল সাপোর্ট করার জন্য CORS
 CORS(app)
 
 registrar = Registrar()
 
-# রেন্ডারের এনভায়রনমেন্ট ভেরিয়েবল থেকে কী রিড করবে
+# মাস্টার কী (নিরাপত্তার জন্য)
 MASTER_KEY = os.getenv("MASTER_API_KEY", "Samrat_Omor_16_Year_Gift")
 
+# --- ১৬ বছরের স্বপ্নের ডোমেইন ইঞ্জিন লজিক ---
+@app.before_request
+def dns_routing_engine():
+    """
+    এটিই তোমার ইঞ্জিনের আসল 'মস্তিষ্ক'। 
+    ব্রাউজারে যে ডোমেইনই লেখা হোক, এই ফাংশন সেটাকে ক্যাচ করবে।
+    """
+    host = request.host.lower().replace('www.', '')
+    
+    # তোমার মেইন ইঞ্জিন ইউআরএল (যাতে লুপ না হয়)
+    engine_url = "https://root-d6v2.onrender.com"
+    
+    # যদি রিকোয়েস্টটি ডোমেইন নাম দিয়ে আসে (যেমন smriti.cloud)
+    if host != engine_url and not host.startswith('localhost'):
+        all_domains = registrar.get_all_domains()
+        
+        if host in all_domains:
+            target_link = all_domains[host]["target"]
+            # সরাসরি রিডাইরেক্ট - এটাই হলো রেজোলিউশন
+            return redirect(target_link, code=301)
+
+# --- ড্যাশবোর্ড রুট ---
 @app.route('/')
-def dashboard():
+def home():
     return render_template('index.html')
 
-# ১. নতুন GET রুট: ডোমেইন রেজোলিউশন চেক করার জন্য
+# --- রেজোলিউশন এপিআই (GET) ---
 @app.route('/api/v1/resolve', methods=['GET'])
 def resolve():
     domain = request.args.get("domain")
     if not domain:
-        return jsonify({"status": "error", "message": "Domain parameter is missing"}), 400
-
-    # Registrar থেকে সব ডাটা নিয়ে আসা
-    all_data = registrar.get_all_domains()
+        return jsonify({"status": "error", "message": "Missing domain"}), 400
     
+    all_data = registrar.get_all_domains()
     if domain in all_data:
         return jsonify({
-            "status": "success",
-            "domain": domain,
-            "target": all_data[domain]["target"],
-            "info": all_data[domain]
+            "status": "success", 
+            "domain": domain, 
+            "target": all_data[domain]["target"]
         }), 200
-    else:
-        return jsonify({"status": "error", "message": "Domain not found in SmritiName registry"}), 404
+    return jsonify({"status": "error", "message": "Domain not registered"}), 404
 
-# ২. ডোমেইন রেজিস্ট্রেশন রুট (POST)
+# --- রেজিস্ট্রেশন এপিআই (POST) ---
 @app.route('/api/v1/register', methods=['POST'])
 def register():
-    # অথেন্টিকেশন চেক
     api_key = request.headers.get("X-Smriti-Key")
     if api_key != MASTER_KEY:
         return jsonify({"status": "error", "message": "Unauthorized Access"}), 401
 
     try:
         data = request.get_json()
-        if not data:
-            return jsonify({"status": "error", "message": "No data provided"}), 400
-
-        domain = data.get("domain")
+        domain = data.get("domain").lower().replace('www.', '')
         target = data.get("target")
 
-        if not domain or not target:
-            return jsonify({"status": "error", "message": "Domain and Target are required"}), 400
-
-        # ডোমেইন রেজিস্ট্রেশন শুরু
-        success = registrar.register(domain, target)
-        
-        if success:
+        if registrar.register(domain, target):
             return jsonify({
                 "status": "success", 
-                "message": f"Domain '{domain}' has been immortalized!",
-                "sync": "Master Cloud Updated"
+                "message": f"'{domain}' is now live on your engine!"
             }), 200
-        else:
-            return jsonify({"status": "error", "message": "Database write failed"}), 500
-
+        return jsonify({"status": "error", "message": "Storage error"}), 500
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# --- হেলথ চেক (গ্লোবাল গেটওয়ের জন্য) ---
+@app.route('/healthz')
+def health():
+    return "Smriti Engine Online", 200
+
 if __name__ == '__main__':
-    # রেন্ডার সাধারণত ৮০৮০ বা তার বেশি পোর্ট ব্যবহার করে
+    # রেন্ডারের পোর্টে রান করা
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
